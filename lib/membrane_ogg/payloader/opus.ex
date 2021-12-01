@@ -17,7 +17,15 @@ defmodule Membrane.Ogg.Payloader.Opus do
   @encapsulation_version 1
   @reference_sample_rate 48_000
 
-  def_options original_sample_rate: [
+  def_options frame_size: [
+                type: :float,
+                description: """
+                The duration of an Opus packet as defined in [RFC6716] can be any
+                multiple of 2.5 ms, up to a maximum of 120 ms.
+                See https://datatracker.ietf.org/doc/html/rfc7845#section-4
+                """
+              ],
+              original_sample_rate: [
                 type: :non_neg_integer,
                 default: 0,
                 description: """
@@ -195,13 +203,9 @@ defmodule Membrane.Ogg.Payloader.Opus do
     )
   end
 
-  defp audio_pages(data, ctx, state) do
-    position_offset =
-      granule_position_offset(
-        ctx.pads.input.caps.frame_size,
-        ctx.pads.input.caps.frame_lengths
-        |> Enum.count(fn length -> length != 0 end)
-      )
+  defp audio_pages(data, _ctx, state) do
+    # FIXME for now doesn't handle 0-length frames
+    position_offset = div(@reference_sample_rate, 1000) * state.frame_size
 
     {:ok, output} =
       Payloader.make_pages(
@@ -213,9 +217,5 @@ defmodule Membrane.Ogg.Payloader.Opus do
       )
 
     {:ok, {output, position_offset}}
-  end
-
-  defp granule_position_offset(frame_size, present_frame_count) do
-    div(@reference_sample_rate, 1000) * frame_size * present_frame_count
   end
 end

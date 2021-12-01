@@ -1,6 +1,8 @@
 #include "payloader.h"
 #include <unistd.h>
 
+typedef UnifexState State;
+
 UNIFEX_TERM create(UnifexEnv *env, unsigned int serial) {
   State *state = unifex_alloc_state(env);
   if (ogg_stream_init(&state->stream, serial) == -1) {
@@ -13,7 +15,7 @@ UNIFEX_TERM create(UnifexEnv *env, unsigned int serial) {
   return res;
 }
 
-UNIFEX_TERM make_pages(UnifexEnv *env, UnifexPayload *in_payload, UnifexNifState *state, unsigned int position, unsigned int packet_number, int header_type) {
+UNIFEX_TERM make_pages(UnifexEnv *env, UnifexPayload *in_payload, UnifexState *state, unsigned int position, unsigned int packet_number, int header_type) {
   ogg_packet packet = {
     in_payload->data,
     in_payload->size,
@@ -40,7 +42,8 @@ UNIFEX_TERM make_pages(UnifexEnv *env, UnifexPayload *in_payload, UnifexNifState
     total_size += addl_size;
   }
 
-  UnifexPayload *out_payload = unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, total_size);
+  UnifexPayload *out_payload = unifex_alloc(sizeof(UnifexPayload));
+  unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, total_size, out_payload);
   if (total_size > 0) {
     memcpy(out_payload->data, data, total_size);
     free(data);
@@ -50,10 +53,11 @@ UNIFEX_TERM make_pages(UnifexEnv *env, UnifexPayload *in_payload, UnifexNifState
   return res;
 }
 
-UNIFEX_TERM flush(UnifexEnv *env, UnifexNifState *state) {
+UNIFEX_TERM flush(UnifexEnv *env, UnifexState *state) {
   int flush_result = ogg_stream_flush(&state->stream, &state->page);
   int total_size = flush_result == 0 ? 0 : state->page.header_len + state->page.body_len;
-  UnifexPayload *out_payload = unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, total_size);
+  UnifexPayload *out_payload = unifex_alloc(sizeof(UnifexPayload));
+  unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, total_size, out_payload);
 
   if (flush_result != 0) {
     unsigned char *pointer = out_payload->data;
@@ -66,7 +70,7 @@ UNIFEX_TERM flush(UnifexEnv *env, UnifexNifState *state) {
   return res;
 }
 
-void handle_destroy_state(UnifexEnv *env, UnifexNifState *state) {
+void handle_destroy_state(UnifexEnv *env, UnifexState *state) {
   UNIFEX_UNUSED(env);
   ogg_stream_clear(&state->stream);
 }

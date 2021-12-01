@@ -15,3 +15,5 @@ spec make_pages(
 spec flush(state :: state) ::
        {:ok :: label, payload :: payload}
        | {:error :: label, reason :: atom}
+
+state_type "PayloaderState"

@@ -4,12 +4,10 @@
 #include <membrane/log.h>
 #include <ogg/ogg.h>
 
-typedef struct _PayloaderState UnifexNifState;
-typedef UnifexNifState State;
+typedef struct _PayloaderState PayloaderState;
+#include "_generated/payloader.h"
 
 struct _PayloaderState {
   ogg_stream_state stream;
   ogg_page page;
 };
-
-#include "_generated/payloader.h"

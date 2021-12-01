@@ -3,19 +3,18 @@ defmodule Membrane.Ogg.BundlexProject do
 
   def project do
     [
-      nifs: nifs(Bundlex.platform())
+      natives: natives()
     ]
   end
 
-  def nifs(_platform) do
+  def natives() do
     [
       payloader: [
-        deps: [membrane_common_c: :membrane, unifex: :unifex],
-        sources: [
-          "_generated/payloader.c",
-          "payloader.c"
-        ],
-        libs: ["ogg"]
+        interface: :nif,
+        deps: [membrane_common_c: :membrane],
+        sources: ["payloader.c"],
+        pkg_configs: ["ogg"],
+        preprocessor: Unifex
       ]
     ]
   end
