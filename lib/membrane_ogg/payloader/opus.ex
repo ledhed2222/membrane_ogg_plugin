@@ -9,6 +9,8 @@ defmodule Membrane.Ogg.Payloader.Opus do
 
   use Membrane.Filter
 
+  require Membrane.Logger
+
   alias Membrane.{Buffer, Opus, Ogg}
   alias Membrane.Ogg.Payloader
 
@@ -18,37 +20,47 @@ defmodule Membrane.Ogg.Payloader.Opus do
   @reference_sample_rate 48_000
 
   def_options frame_size: [
-                type: :float,
+                spec: float,
                 description: """
-                The duration of an Opus packet as defined in [RFC6716] can be any
+                The duration of an Opus packet can be any
                 multiple of 2.5 ms, up to a maximum of 120 ms.
                 See https://datatracker.ietf.org/doc/html/rfc7845#section-4
                 """
               ],
+              serial_number: [
+                spec: non_neg_integer | :random,
+                default: :random,
+                description: """
+                Ogg logical bitstreams must be assigned a unique 4-byte serial number which is chosen randomly.
+                This option allows you to pass in a specific number which can be useful for reproducability.
+                See https://datatracker.ietf.org/doc/html/rfc3533#section-4
+                """
+              ],
               original_sample_rate: [
-                type: :non_neg_integer,
+                spec: non_neg_integer,
                 default: 0,
                 description: """
-                Optionally, you may pass the original sample rate of the source (before it was encoded).
-                This is considered metadata for Ogg/Opus. Leave this at 0 otherwise.
+                The original sample rate of the source - before it was encoded with Opus.
+                This is considered optional metadata for Ogg/Opus and it does NOT affect playback.
                 See https://tools.ietf.org/html/rfc7845#section-5.
                 """
               ],
               output_gain: [
-                type: :integer,
+                spec: integer,
                 default: 0,
                 description: """
-                Optionally, you may pass a gain change when decoding.
-                You probably shouldn't though. Instead apply any gain changes using Membrane itself, if possible.
+                The gain change to be applied by a player when decoding.
+                This is NOT the preferred way to change volume.
+                Unless you have a reason to preserve the original audio waveform, gain changes should be applied
+                directly to the samples i.e. the stream should be remuxed with scaled samples and 0 `output_gain`.
                 See https://tools.ietf.org/html/rfc7845#section-5
                 """
               ],
               pre_skip: [
-                type: :non_neg_integer,
+                spec: non_neg_integer,
                 default: 0,
                 description: """
-                Optionally, you may as a number of samples (at 48kHz) to discard
-                from the decoder output when starting playback.
+                The number of samples (at 48kHz) to be discarded from the decoder output when starting playback.
                 See https://tools.ietf.org/html/rfc7845#section-5
                 """
               ]
@@ -74,7 +86,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
 
   @impl true
   def handle_stopped_to_prepared(_ctx, state) do
-    case Payloader.init() do
+    case Payloader.init(state.serial_number) do
       {:ok, payloader} ->
         {:ok, %{state | payloader: payloader}}
 
@@ -95,6 +107,12 @@ defmodule Membrane.Ogg.Payloader.Opus do
 
   @impl true
   def handle_caps(:input, caps, _ctx, state) do
+    if caps.channels > 2,
+      do:
+        Membrane.Logger.warn(
+          "Tried to payload an Opus stream with #{caps.channels} but only Opus streams with 1 or 2 channels are currently supported."
+        )
+
     caps = %Ogg{
       content: caps
     }
@@ -204,7 +222,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
   end
 
   defp audio_pages(data, _ctx, state) do
-    # FIXME for now doesn't handle 0-length frames
+    # TODO: for now doesn't handle 0-length frames
     position_offset = div(@reference_sample_rate, 1000) * state.frame_size
 
     {:ok, output} =

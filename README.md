@@ -10,6 +10,8 @@ It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
 ## Installation
 
+This package depends on [libogg](https://xiph.org/ogg/).
+
 The package can be installed by adding `membrane_ogg_plugin` to your list of dependencies in `mix.exs`:
 
 ```elixir

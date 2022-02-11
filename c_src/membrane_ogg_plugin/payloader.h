@@ -1,4 +1,5 @@
 #pragma once
+typedef unsigned int uint;
 
 #define MEMBRANE_LOG_TAG "Membrane.Ogg.PayloaderNative"
 #include <membrane/log.h>
