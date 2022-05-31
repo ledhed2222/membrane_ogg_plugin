@@ -37,9 +37,9 @@ defmodule Membrane.OggPlugin.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.2"},
-      {:membrane_common_c, "~> 0.10.0"},
-      {:unifex, "~> 0.7.0"},
+      {:membrane_core, "~> 0.10.0"},
+      {:membrane_common_c, "~> 0.13.0"},
+      {:unifex, "~> 1.0.0"},
       # TODO: publish on hex and don't reference github
       {:membrane_ogg_format, github: "membraneframework/membrane_ogg_format"},
       {:membrane_opus_format, "~> 0.3.0"},

@@ -11,7 +11,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
 
   require Membrane.Logger
 
-  alias Membrane.{Buffer, Opus, Ogg}
+  alias Membrane.{Buffer, Ogg, Opus}
   alias Membrane.Ogg.Payloader
 
   @vendor_string "Membrane"
@@ -222,7 +222,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
   end
 
   defp audio_pages(data, _ctx, state) do
-    # TODO: for now doesn't handle 0-length frames
+    # For now doesn't handle 0-length frames
     position_offset = div(@reference_sample_rate, 1000) * state.frame_size
 
     {:ok, output} =
