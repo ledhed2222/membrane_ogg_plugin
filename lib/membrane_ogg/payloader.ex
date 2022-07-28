@@ -9,7 +9,7 @@ defmodule Membrane.Ogg.Payloader do
 
   alias __MODULE__.Native
 
-  @spec init(non_neg_integer | :random) :: {:ok, state :: binary} | {:error, reason :: atom}
+  @spec init(non_neg_integer | :random) :: {:ok, state :: reference} | {:error, reason :: atom}
   def init(serial_number) do
     Native.create(stream_identifier(serial_number))
   end
