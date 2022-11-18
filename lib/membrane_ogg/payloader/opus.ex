@@ -65,11 +65,11 @@ defmodule Membrane.Ogg.Payloader.Opus do
                 """
               ]
 
-  def_input_pad :input, demand_unit: :buffers, caps: Opus
-  def_output_pad :output, caps: Ogg
+  def_input_pad :input, demand_unit: :buffers, accepted_format: Opus
+  def_output_pad :output, accepted_format: Ogg
 
   @impl true
-  def handle_init(%__MODULE__{} = options) do
+  def handle_init(_ctx, %__MODULE__{} = options) do
     state =
       options
       |> Map.from_struct()
@@ -81,14 +81,14 @@ defmodule Membrane.Ogg.Payloader.Opus do
         packet_number: 2
       })
 
-    {:ok, state}
+    {[], state}
   end
 
   @impl true
-  def handle_stopped_to_prepared(_ctx, state) do
+  def handle_setup(_ctx, state) do
     case Payloader.init(state.serial_number) do
       {:ok, payloader} ->
-        {:ok, %{state | payloader: payloader}}
+        {[], %{state | payloader: payloader}}
 
       {:error, reason} ->
         {{:error, reason}, state}
@@ -96,28 +96,23 @@ defmodule Membrane.Ogg.Payloader.Opus do
   end
 
   @impl true
-  def handle_prepared_to_stopped(_ctx, state) do
-    {:ok, %{state | payloader: nil}}
-  end
-
-  @impl true
   def handle_demand(:output, bufs, :buffers, _ctx, state) do
-    {{:ok, demand: {:input, bufs}}, state}
+    {[demand: {:input, bufs}], state}
   end
 
   @impl true
-  def handle_caps(:input, caps, _ctx, state) do
-    if caps.channels > 2,
+  def handle_stream_format(:input, stream_format, _ctx, state) do
+    if stream_format.channels > 2,
       do:
         Membrane.Logger.warn(
-          "Tried to payload an Opus stream with #{caps.channels} but only Opus streams with 1 or 2 channels are currently supported."
+          "Tried to payload an Opus stream with #{stream_format.channels} but only Opus streams with 1 or 2 channels are currently supported."
         )
 
-    caps = %Ogg{
-      content: caps
+    stream_format = %Ogg{
+      content: stream_format
     }
 
-    {{:ok, caps: {:output, caps}}, state}
+    {[stream_format: {:output, stream_format}], state}
   end
 
   @impl true
@@ -131,7 +126,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
         :eos
       )
 
-    {{:ok, buffer: {:output, %Buffer{payload: null_page}}, end_of_stream: :output},
+    {[buffer: {:output, %Buffer{payload: null_page}}, end_of_stream: :output],
      %{state | packet_number: state.packet_number + 1}}
   end
 
@@ -153,7 +148,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
         [redemand: :output]
       end
 
-    {{:ok, actions}, state}
+    {actions, state}
   end
 
   @impl true
@@ -178,7 +173,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
           header_sent?: true
         })
 
-      {{:ok, buffer: {:output, output}}, state}
+      {[buffer: {:output, output}], state}
     else
       {:error, reason} -> {{:error, reason}, state}
     end
@@ -188,7 +183,7 @@ defmodule Membrane.Ogg.Payloader.Opus do
     [
       "OpusHead",
       <<@encapsulation_version::size(8)>>,
-      <<ctx.pads.input.caps.channels::size(8)>>,
+      <<ctx.pads.input.stream_format.channels::size(8)>>,
       <<state.pre_skip::little-size(16)>>,
       <<state.original_sample_rate::little-size(32)>>,
       <<state.output_gain::little-signed-size(16)>>,
